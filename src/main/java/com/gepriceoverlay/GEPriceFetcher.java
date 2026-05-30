@@ -6,43 +6,39 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 public class GEPriceFetcher
 {
 	private static final String API_BASE = "https://prices.runescape.wiki/api/v1/osrs";
 
-	public static CompletableFuture<PriceData> fetchPriceData(int itemId, GEPriceOverlayConfig.TimeFrame tf)
+	static PriceData fetchSync(int itemId, GEPriceOverlayConfig.TimeFrame tf)
 	{
-		return CompletableFuture.supplyAsync(() ->
+		try
 		{
-			try
-			{
-				String timestep = toTimestep(tf);
-				URL url = new URL(API_BASE + "/timeseries?timestep=" + timestep + "&id=" + itemId);
-				HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-				conn.setRequestProperty("User-Agent", "ge-price-overlay RuneLite plugin");
-				conn.setConnectTimeout(5000);
-				conn.setReadTimeout(5000);
-				conn.connect();
+			String timestep = toTimestep(tf);
+			URL url = new URL(API_BASE + "/timeseries?timestep=" + timestep + "&id=" + itemId);
+			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+			conn.setRequestProperty("User-Agent", "ge-price-overlay RuneLite plugin");
+			conn.setConnectTimeout(5000);
+			conn.setReadTimeout(5000);
+			conn.connect();
 
-				StringBuilder sb = new StringBuilder();
-				try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream())))
+			StringBuilder sb = new StringBuilder();
+			try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream())))
+			{
+				String line;
+				while ((line = reader.readLine()) != null)
 				{
-					String line;
-					while ((line = reader.readLine()) != null)
-					{
-						sb.append(line);
-					}
+					sb.append(line);
 				}
+			}
 
-				return parseTimeseries(sb.toString(), toLookback(tf));
-			}
-			catch (Exception e)
-			{
-				return null;
-			}
-		});
+			return parseTimeseries(sb.toString(), toLookback(tf));
+		}
+		catch (Exception e)
+		{
+			return null;
+		}
 	}
 
 	private static String toTimestep(GEPriceOverlayConfig.TimeFrame tf)
@@ -57,7 +53,6 @@ public class GEPriceFetcher
 		}
 	}
 
-	// how many intervals back to compare against (i.e. the "previous" price)
 	private static int toLookback(GEPriceOverlayConfig.TimeFrame tf)
 	{
 		switch (tf)

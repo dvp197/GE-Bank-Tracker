@@ -22,10 +22,13 @@ import net.runelite.client.util.ImageUtil;
 
 import javax.inject.Inject;
 import java.awt.image.BufferedImage;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -63,10 +66,12 @@ public class GEPriceOverlayPlugin extends Plugin
 	private GEPricePanel panel;
 	private NavigationButton navButton;
 
-	// null value = non-tradeable sentinel (don't re-request)
-	private final Map<Integer, PriceData> itemPriceCache = new HashMap<>();
-	private final Map<Integer, String> itemNameCache = new HashMap<>();
+	private final Map<Integer, PriceData> itemPriceCache = new ConcurrentHashMap<>();
+	private final Map<Integer, String> itemNameCache = new ConcurrentHashMap<>();
 	private final Set<Integer> pinnedItems = new HashSet<>();
+	// tracks items already requested so we don't fire duplicate fetches
+	private final Set<Integer> requestedIds = ConcurrentHashMap.newKeySet();
+	private ScheduledExecutorService executor;
 
 	@Provides
 	GEPriceOverlayConfig provideConfig(ConfigManager configManager)
@@ -77,6 +82,7 @@ public class GEPriceOverlayPlugin extends Plugin
 	@Override
 	protected void startUp()
 	{
+		executor = Executors.newScheduledThreadPool(2);
 		overlayManager.add(overlay);
 		panel = new GEPricePanel(config);
 		final BufferedImage icon = ImageUtil.loadImageResource(getClass(), "/icon.png");
@@ -94,11 +100,13 @@ public class GEPriceOverlayPlugin extends Plugin
 	@Override
 	protected void shutDown()
 	{
+		executor.shutdownNow();
 		overlayManager.remove(overlay);
 		clientToolbar.removeNavigation(navButton);
 		itemPriceCache.clear();
 		itemNameCache.clear();
 		pinnedItems.clear();
+		requestedIds.clear();
 	}
 
 	@Subscribe
@@ -111,6 +119,7 @@ public class GEPriceOverlayPlugin extends Plugin
 		if (event.getKey().equals("timeFrame") || event.getKey().equals("minimumValue"))
 		{
 			itemPriceCache.clear();
+			requestedIds.clear();
 			fetchPinnedItems();
 		}
 	}
@@ -160,7 +169,7 @@ public class GEPriceOverlayPlugin extends Plugin
 			return;
 		}
 
-		int total = 0, fetching = 0, cached = 0, skipped = 0;
+		int total = 0, fetching = 0, cached = 0, skipped = 0, delay = 0;
 
 		for (var item : container.getItems())
 		{
@@ -183,16 +192,16 @@ public class GEPriceOverlayPlugin extends Plugin
 				continue;
 			}
 
-			if (itemPriceCache.containsKey(itemId))
+			if (requestedIds.contains(itemId))
 			{
 				log.debug("Already cached {} (id={})", name, itemId);
 				cached++;
 				continue;
 			}
 
-			log.debug("Fetching price for {} (id={})", name, itemId);
+			log.debug("Fetching price for {} (id={}) in {}ms", name, itemId, delay * 100);
 			fetching++;
-			fetchItem(itemId, name);
+			fetchItem(itemId, name, delay++ * 100L);
 		}
 
 		log.info("Bank scan: {} items total, {} fetching, {} cached, {} skipped", total, fetching, cached, skipped);
@@ -214,22 +223,23 @@ public class GEPriceOverlayPlugin extends Plugin
 		if (!pinnedItems.remove(itemId))
 		{
 			pinnedItems.add(itemId);
-			if (!itemPriceCache.containsKey(itemId))
+			if (!requestedIds.contains(itemId))
 			{
 				String name = itemNameCache.computeIfAbsent(itemId,
 					id -> itemManager.getItemComposition(id).getName());
-				fetchItem(itemId, name);
+				fetchItem(itemId, name, 0);
 			}
 		}
 		savePinnedItems();
 		updatePanel();
 	}
 
-	private void fetchItem(int itemId, String name)
+	private void fetchItem(int itemId, String name, long delayMs)
 	{
-		itemPriceCache.put(itemId, null);
-		GEPriceFetcher.fetchPriceData(itemId, config.timeFrame()).thenAccept(data ->
+		requestedIds.add(itemId);
+		executor.schedule(() ->
 		{
+			PriceData data = GEPriceFetcher.fetchSync(itemId, config.timeFrame());
 			if (data != null)
 			{
 				log.debug("Got price for {} (id={}): current={} previous={} change={}%",
@@ -241,27 +251,28 @@ public class GEPriceOverlayPlugin extends Plugin
 				log.debug("No price data for {} (id={}) — non-tradeable or API error", name, itemId);
 			}
 			updatePanel();
-		});
+		}, delayMs, TimeUnit.MILLISECONDS);
 	}
 
 	private void updatePanel()
 	{
 		panel.update(
-			new HashMap<>(itemPriceCache),
-			new HashMap<>(itemNameCache),
+			new ConcurrentHashMap<>(itemPriceCache),
+			new ConcurrentHashMap<>(itemNameCache),
 			new HashSet<>(pinnedItems)
 		);
 	}
 
 	private void fetchPinnedItems()
 	{
+		int delay = 0;
 		for (int itemId : pinnedItems)
 		{
-			if (!itemPriceCache.containsKey(itemId))
+			if (!requestedIds.contains(itemId))
 			{
 				// Name lookup requires client thread — startUp runs on EDT so skip it here.
 				// itemNameCache will be populated properly when the bank is opened.
-				fetchItem(itemId, itemNameCache.getOrDefault(itemId, "item " + itemId));
+				fetchItem(itemId, itemNameCache.getOrDefault(itemId, "item " + itemId), delay++ * 100L);
 			}
 		}
 	}
