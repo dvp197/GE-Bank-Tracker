@@ -7,8 +7,10 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class GEPricePanel extends PluginPanel
 {
@@ -16,6 +18,8 @@ public class GEPricePanel extends PluginPanel
 
 	private final GEPriceOverlayConfig config;
 	private final JPanel listPanel;
+	private JLabel timeframeLabel;
+	private JLabel summaryLabel;
 
 	public GEPricePanel(GEPriceOverlayConfig config)
 	{
@@ -27,8 +31,24 @@ public class GEPricePanel extends PluginPanel
 		JLabel title = new JLabel("GE Bank Tracker", SwingConstants.CENTER);
 		title.setForeground(Color.WHITE);
 		title.setFont(title.getFont().deriveFont(Font.BOLD, 14f));
-		title.setBorder(new EmptyBorder(8, 0, 8, 0));
-		add(title, BorderLayout.NORTH);
+		title.setBorder(new EmptyBorder(8, 0, 2, 0));
+
+		timeframeLabel = new JLabel("", SwingConstants.CENTER);
+		timeframeLabel.setForeground(Color.YELLOW);
+		timeframeLabel.setFont(timeframeLabel.getFont().deriveFont(Font.BOLD, 14f));
+		timeframeLabel.setBorder(new EmptyBorder(0, 0, 4, 0));
+
+		summaryLabel = new JLabel("", SwingConstants.CENTER);
+		summaryLabel.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+		summaryLabel.setFont(summaryLabel.getFont().deriveFont(11f));
+		summaryLabel.setBorder(new EmptyBorder(0, 0, 6, 0));
+
+		JPanel header = new JPanel(new BorderLayout());
+		header.setBackground(ColorScheme.DARK_GRAY_COLOR);
+		header.add(title, BorderLayout.NORTH);
+		header.add(timeframeLabel, BorderLayout.CENTER);
+		header.add(summaryLabel, BorderLayout.SOUTH);
+		add(header, BorderLayout.NORTH);
 
 		listPanel = new JPanel();
 		listPanel.setLayout(new BoxLayout(listPanel, BoxLayout.Y_AXIS));
@@ -40,6 +60,24 @@ public class GEPricePanel extends PluginPanel
 	{
 		SwingUtilities.invokeLater(() ->
 		{
+			timeframeLabel.setText(config.timeFrame().name());
+
+			List<PriceData> tracked = priceCache.values().stream()
+				.filter(d -> d != null && d.getChange() != 0)
+				.collect(Collectors.toList());
+
+			long up = tracked.stream().filter(d -> d.getChange() > 0).count();
+			long down = tracked.stream().filter(d -> d.getChange() < 0).count();
+
+			if (!tracked.isEmpty())
+			{
+				summaryLabel.setText(tracked.size() + " items  •  " + up + "↑  " + down + "↓");
+			}
+			else
+			{
+				summaryLabel.setText("");
+			}
+
 			listPanel.removeAll();
 
 			boolean moneyMode = config.displayMode() == GEPriceOverlayConfig.DisplayMode.MONEY;
