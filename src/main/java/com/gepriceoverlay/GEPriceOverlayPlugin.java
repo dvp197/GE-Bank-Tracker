@@ -33,7 +33,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @PluginDescriptor(
-		name = "GE Price Overlay",
+		name = "GE Bank Tracker",
 		description = "Displays GE price changes for bank tab items",
 		tags = {"ge", "price", "overlay", "bank"}
 )
