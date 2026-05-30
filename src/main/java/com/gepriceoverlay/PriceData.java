@@ -17,10 +17,10 @@ public class PriceData
 
 	public int getChange() { return current - previous; }
 
-	public int getChangePercent()
+	public double getChangePercent()
 	{
 		if (previous == 0) return 0;
-		return (int) ((current - previous) / (double) previous * 100);
+		return (current - previous) / (double) previous * 100;
 	}
 
 	public static String formatGold(int change)

@@ -56,7 +56,7 @@ public class GEPriceOverlay extends WidgetItemOverlay
 			? "stable"
 			: config.displayMode() == GEPriceOverlayConfig.DisplayMode.MONEY
 				? PriceData.formatGold(change)
-				: String.format("%s%d%%", change > 0 ? "+" : "", priceData.getChangePercent());
+				: String.format("%s%.1f%%", change > 0 ? "+" : "", priceData.getChangePercent());
 
 		graphics.setFont(FontManager.getRunescapeSmallFont());
 		FontMetrics fm = graphics.getFontMetrics();

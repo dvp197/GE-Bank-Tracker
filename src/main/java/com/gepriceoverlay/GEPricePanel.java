@@ -33,17 +33,7 @@ public class GEPricePanel extends PluginPanel
 		listPanel = new JPanel();
 		listPanel.setLayout(new BoxLayout(listPanel, BoxLayout.Y_AXIS));
 		listPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
-
-		// wrap in a NORTH-anchored container so rows don't stretch vertically
-		JPanel wrapper = new JPanel(new BorderLayout());
-		wrapper.setBackground(ColorScheme.DARK_GRAY_COLOR);
-		wrapper.add(listPanel, BorderLayout.NORTH);
-
-		JScrollPane scrollPane = new JScrollPane(wrapper);
-		scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-		scrollPane.setBorder(null);
-		scrollPane.getViewport().setBackground(ColorScheme.DARK_GRAY_COLOR);
-		add(scrollPane, BorderLayout.CENTER);
+		add(listPanel, BorderLayout.CENTER);
 	}
 
 	public void update(Map<Integer, PriceData> priceCache, Map<Integer, String> nameCache, Set<Integer> pinnedItems)
@@ -56,7 +46,7 @@ public class GEPricePanel extends PluginPanel
 
 			priceCache.entrySet().stream()
 				.filter(e -> e.getValue() != null && (e.getValue().getChange() != 0 || pinnedItems.contains(e.getKey())))
-				.sorted(Comparator.comparingInt((Map.Entry<Integer, PriceData> e) -> moneyMode
+				.sorted(Comparator.comparingDouble((Map.Entry<Integer, PriceData> e) -> moneyMode
 					? e.getValue().getChange()
 					: e.getValue().getChangePercent()).reversed())
 				.forEach(e ->
@@ -74,7 +64,7 @@ public class GEPricePanel extends PluginPanel
 						? "stable"
 						: moneyMode
 							? PriceData.formatGold(change)
-							: String.format("%s%d%%", change > 0 ? "+" : "", data.getChangePercent());
+							: String.format("%s%.1f%%", change > 0 ? "+" : "", data.getChangePercent());
 
 					JLabel nameLabel = new JLabel(name);
 					nameLabel.setForeground(Color.WHITE);
