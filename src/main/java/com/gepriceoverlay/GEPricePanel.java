@@ -1,6 +1,5 @@
 package com.gepriceoverlay;
 
-import net.runelite.client.game.ItemManager;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.PluginPanel;
 
@@ -12,13 +11,11 @@ import java.util.Map;
 
 public class GEPricePanel extends PluginPanel
 {
-	private final ItemManager itemManager;
 	private final GEPriceOverlayConfig config;
 	private final JPanel listPanel;
 
-	public GEPricePanel(ItemManager itemManager, GEPriceOverlayConfig config)
+	public GEPricePanel(GEPriceOverlayConfig config)
 	{
-		this.itemManager = itemManager; // kept for potential future use
 		this.config = config;
 
 		setLayout(new BorderLayout());
@@ -47,10 +44,13 @@ public class GEPricePanel extends PluginPanel
 		{
 			listPanel.removeAll();
 
+			boolean moneyMode = config.displayMode() == GEPriceOverlayConfig.DisplayMode.MONEY;
+
 			priceCache.entrySet().stream()
 				.filter(e -> e.getValue() != null && e.getValue().getChange() != 0)
-				.sorted(Comparator.comparingInt((Map.Entry<Integer, PriceData> e) ->
-					e.getValue().getChangePercent()).reversed())
+				.sorted(Comparator.comparingInt((Map.Entry<Integer, PriceData> e) -> moneyMode
+					? e.getValue().getChange()
+					: e.getValue().getChangePercent()).reversed())
 				.forEach(e ->
 				{
 					int itemId = e.getKey();
@@ -60,26 +60,26 @@ public class GEPricePanel extends PluginPanel
 					int change = data.getChange();
 					Color changeColor = change > 0 ? new Color(0, 200, 0) : Color.RED;
 					String changeText = config.displayMode() == GEPriceOverlayConfig.DisplayMode.MONEY
-						? formatGold(change)
+						? PriceData.formatGold(change)
 						: String.format("%s%d%%", change > 0 ? "+" : "", data.getChangePercent());
 
 					JLabel nameLabel = new JLabel(name);
 					nameLabel.setForeground(Color.WHITE);
-					nameLabel.setFont(nameLabel.getFont().deriveFont(12f));
+					nameLabel.setFont(nameLabel.getFont().deriveFont(16f));
 
 					JLabel changeLabel = new JLabel(changeText);
 					changeLabel.setForeground(changeColor);
-					changeLabel.setFont(changeLabel.getFont().deriveFont(Font.BOLD, 12f));
+					changeLabel.setFont(changeLabel.getFont().deriveFont(Font.BOLD, 16f));
 
 					JPanel row = new JPanel(new BorderLayout());
 					row.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-					row.setBorder(new EmptyBorder(4, 8, 4, 8));
+					row.setBorder(new EmptyBorder(8, 10, 8, 10));
 					row.add(nameLabel, BorderLayout.WEST);
 					row.add(changeLabel, BorderLayout.EAST);
 					row.setMaximumSize(new Dimension(Integer.MAX_VALUE, row.getPreferredSize().height));
 
 					listPanel.add(row);
-					listPanel.add(Box.createVerticalStrut(2));
+					listPanel.add(Box.createVerticalStrut(4));
 				});
 
 			if (listPanel.getComponentCount() == 0)
@@ -95,22 +95,4 @@ public class GEPricePanel extends PluginPanel
 		});
 	}
 
-	private static String formatGold(int change)
-	{
-		String sign = change > 0 ? "+" : "-";
-		long abs = Math.abs(change);
-		if (abs >= 1_000_000_000)
-		{
-			return sign + String.format("%.1fB", abs / 1_000_000_000.0);
-		}
-		if (abs >= 1_000_000)
-		{
-			return sign + String.format("%.1fM", abs / 1_000_000.0);
-		}
-		if (abs >= 1_000)
-		{
-			return sign + String.format("%.1fk", abs / 1_000.0);
-		}
-		return sign + abs;
-	}
 }

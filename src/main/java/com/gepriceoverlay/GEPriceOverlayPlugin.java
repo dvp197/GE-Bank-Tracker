@@ -2,11 +2,9 @@ package com.gepriceoverlay;
 
 import com.google.inject.Provides;
 import lombok.extern.slf4j.Slf4j;
-import net.runelite.api.Client;
 import net.runelite.api.InventoryID;
 import net.runelite.api.ItemContainer;
 import net.runelite.api.events.ItemContainerChanged;
-import net.runelite.client.callback.ClientThread;
 import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
@@ -31,12 +29,6 @@ import java.util.Map;
 )
 public class GEPriceOverlayPlugin extends Plugin
 {
-	@Inject
-	private Client client;
-
-	@Inject
-	private ClientThread clientThread;
-
 	@Inject
 	private OverlayManager overlayManager;
 
@@ -69,7 +61,7 @@ public class GEPriceOverlayPlugin extends Plugin
 	protected void startUp()
 	{
 		overlayManager.add(overlay);
-		panel = new GEPricePanel(itemManager, config);
+		panel = new GEPricePanel(config);
 		final BufferedImage icon = ImageUtil.loadImageResource(getClass(), "/icon.png");
 		navButton = NavigationButton.builder()
 			.tooltip("GE Price Changes")

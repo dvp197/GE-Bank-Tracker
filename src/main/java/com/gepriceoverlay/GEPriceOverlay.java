@@ -45,7 +45,7 @@ public class GEPriceOverlay extends WidgetItemOverlay
         int change = priceData.getChange();
         Color color = change > 0 ? Color.GREEN : Color.RED;
         String text = config.displayMode() == GEPriceOverlayConfig.DisplayMode.MONEY
-            ? formatGold(change)
+            ? PriceData.formatGold(change)
             : String.format("%s%d%%", change > 0 ? "+" : "", priceData.getChangePercent());
 
         graphics.setFont(FontManager.getRunescapeSmallFont());
@@ -58,22 +58,4 @@ public class GEPriceOverlay extends WidgetItemOverlay
         OverlayUtil.renderTextLocation(graphics, new Point(x, y), text, color);
     }
 
-    private static String formatGold(int change)
-    {
-        String sign = change > 0 ? "+" : "-";
-        long abs = Math.abs(change);
-        if (abs >= 1_000_000_000)
-        {
-            return sign + String.format("%.1fB", abs / 1_000_000_000.0);
-        }
-        if (abs >= 1_000_000)
-        {
-            return sign + String.format("%.1fM", abs / 1_000_000.0);
-        }
-        if (abs >= 1_000)
-        {
-            return sign + String.format("%.1fk", abs / 1_000.0);
-        }
-        return sign + abs;
-    }
 }
