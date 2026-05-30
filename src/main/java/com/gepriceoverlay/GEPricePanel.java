@@ -64,7 +64,7 @@ public class GEPricePanel extends PluginPanel
 						? "stable"
 						: moneyMode
 							? PriceData.formatGold(change)
-							: String.format("%s%.1f%%", change > 0 ? "+" : "", data.getChangePercent());
+							: PriceData.formatPercent(data.getChangePercent());
 
 					JLabel nameLabel = new JLabel(name);
 					nameLabel.setForeground(Color.WHITE);

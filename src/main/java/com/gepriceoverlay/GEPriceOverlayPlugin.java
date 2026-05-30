@@ -87,7 +87,7 @@ public class GEPriceOverlayPlugin extends Plugin
 		panel = new GEPricePanel(config);
 		final BufferedImage icon = ImageUtil.loadImageResource(getClass(), "/icon.png");
 		navButton = NavigationButton.builder()
-			.tooltip("GE Price Changes")
+			.tooltip("GE Bank Tracker")
 			.icon(icon)
 			.priority(5)
 			.panel(panel)
@@ -194,9 +194,17 @@ public class GEPriceOverlayPlugin extends Plugin
 
 			if (requestedIds.contains(itemId))
 			{
-				log.debug("Already cached {} (id={})", name, itemId);
-				cached++;
-				continue;
+				PriceData existing = itemPriceCache.get(itemId);
+				if (existing == null || !existing.isStale(config.timeFrame()))
+				{
+					log.debug("Already cached {} (id={})", name, itemId);
+					cached++;
+					continue;
+				}
+				// stale — evict and re-fetch
+				log.debug("Evicting stale data for {} (id={})", name, itemId);
+				itemPriceCache.remove(itemId);
+				requestedIds.remove(itemId);
 			}
 
 			log.debug("Fetching price for {} (id={}) in {}ms", name, itemId, delay * 100);
