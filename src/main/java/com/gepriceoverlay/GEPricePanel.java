@@ -8,9 +8,12 @@ import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.util.Comparator;
 import java.util.Map;
+import java.util.Set;
 
 public class GEPricePanel extends PluginPanel
 {
+	private static final int MAX_NAME_LENGTH = 18;
+
 	private final GEPriceOverlayConfig config;
 	private final JPanel listPanel;
 
@@ -23,7 +26,7 @@ public class GEPricePanel extends PluginPanel
 
 		JLabel title = new JLabel("GE Price Changes", SwingConstants.CENTER);
 		title.setForeground(Color.WHITE);
-		title.setFont(title.getFont().deriveFont(Font.BOLD));
+		title.setFont(title.getFont().deriveFont(Font.BOLD, 14f));
 		title.setBorder(new EmptyBorder(8, 0, 8, 0));
 		add(title, BorderLayout.NORTH);
 
@@ -31,14 +34,19 @@ public class GEPricePanel extends PluginPanel
 		listPanel.setLayout(new BoxLayout(listPanel, BoxLayout.Y_AXIS));
 		listPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
 
-		JScrollPane scrollPane = new JScrollPane(listPanel);
+		// wrap in a NORTH-anchored container so rows don't stretch vertically
+		JPanel wrapper = new JPanel(new BorderLayout());
+		wrapper.setBackground(ColorScheme.DARK_GRAY_COLOR);
+		wrapper.add(listPanel, BorderLayout.NORTH);
+
+		JScrollPane scrollPane = new JScrollPane(wrapper);
 		scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 		scrollPane.setBorder(null);
 		scrollPane.getViewport().setBackground(ColorScheme.DARK_GRAY_COLOR);
 		add(scrollPane, BorderLayout.CENTER);
 	}
 
-	public void update(Map<Integer, PriceData> priceCache, Map<Integer, String> nameCache)
+	public void update(Map<Integer, PriceData> priceCache, Map<Integer, String> nameCache, Set<Integer> pinnedItems)
 	{
 		SwingUtilities.invokeLater(() ->
 		{
@@ -47,7 +55,7 @@ public class GEPricePanel extends PluginPanel
 			boolean moneyMode = config.displayMode() == GEPriceOverlayConfig.DisplayMode.MONEY;
 
 			priceCache.entrySet().stream()
-				.filter(e -> e.getValue() != null && e.getValue().getChange() != 0)
+				.filter(e -> e.getValue() != null && (e.getValue().getChange() != 0 || pinnedItems.contains(e.getKey())))
 				.sorted(Comparator.comparingInt((Map.Entry<Integer, PriceData> e) -> moneyMode
 					? e.getValue().getChange()
 					: e.getValue().getChangePercent()).reversed())
@@ -55,23 +63,28 @@ public class GEPricePanel extends PluginPanel
 				{
 					int itemId = e.getKey();
 					PriceData data = e.getValue();
-					String name = nameCache.getOrDefault(itemId, "Item " + itemId);
+					boolean pinned = pinnedItems.contains(itemId);
+
+					String rawName = nameCache.getOrDefault(itemId, "Item " + itemId);
+					String name = (pinned ? "★ " : "") + truncate(rawName);
 
 					int change = data.getChange();
-					Color changeColor = change > 0 ? new Color(0, 200, 0) : Color.RED;
-					String changeText = config.displayMode() == GEPriceOverlayConfig.DisplayMode.MONEY
-						? PriceData.formatGold(change)
-						: String.format("%s%d%%", change > 0 ? "+" : "", data.getChangePercent());
+					Color changeColor = change > 0 ? new Color(0, 200, 0) : change < 0 ? Color.RED : Color.CYAN;
+					String changeText = change == 0
+						? "stable"
+						: moneyMode
+							? PriceData.formatGold(change)
+							: String.format("%s%d%%", change > 0 ? "+" : "", data.getChangePercent());
 
 					JLabel nameLabel = new JLabel(name);
 					nameLabel.setForeground(Color.WHITE);
-					nameLabel.setFont(nameLabel.getFont().deriveFont(16f));
+					nameLabel.setFont(nameLabel.getFont().deriveFont(14f));
 
 					JLabel changeLabel = new JLabel(changeText);
 					changeLabel.setForeground(changeColor);
-					changeLabel.setFont(changeLabel.getFont().deriveFont(Font.BOLD, 16f));
+					changeLabel.setFont(changeLabel.getFont().deriveFont(Font.BOLD, 14f));
 
-					JPanel row = new JPanel(new BorderLayout());
+					JPanel row = new JPanel(new BorderLayout(8, 0));
 					row.setBackground(ColorScheme.DARKER_GRAY_COLOR);
 					row.setBorder(new EmptyBorder(8, 10, 8, 10));
 					row.add(nameLabel, BorderLayout.WEST);
@@ -95,4 +108,12 @@ public class GEPricePanel extends PluginPanel
 		});
 	}
 
+	private static String truncate(String name)
+	{
+		if (name.length() <= MAX_NAME_LENGTH)
+		{
+			return name;
+		}
+		return name.substring(0, MAX_NAME_LENGTH - 1) + "…";
+	}
 }

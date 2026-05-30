@@ -22,6 +22,8 @@ public class GEPriceFetcher
 				URL url = new URL(API_BASE + "/timeseries?timestep=" + timestep + "&id=" + itemId);
 				HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 				conn.setRequestProperty("User-Agent", "ge-price-overlay RuneLite plugin");
+				conn.setConnectTimeout(5000);
+				conn.setReadTimeout(5000);
 				conn.connect();
 
 				StringBuilder sb = new StringBuilder();
