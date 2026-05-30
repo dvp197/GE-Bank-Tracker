@@ -57,6 +57,7 @@ public class GEPriceOverlayPlugin extends Plugin
 
 	// null value = non-tradeable sentinel (don't re-request)
 	private final Map<Integer, PriceData> itemPriceCache = new HashMap<>();
+	private final Map<Integer, String> itemNameCache = new HashMap<>();
 
 	@Provides
 	GEPriceOverlayConfig provideConfig(ConfigManager configManager)
@@ -85,6 +86,7 @@ public class GEPriceOverlayPlugin extends Plugin
 		overlayManager.remove(overlay);
 		clientToolbar.removeNavigation(navButton);
 		itemPriceCache.clear();
+		itemNameCache.clear();
 	}
 
 	@Subscribe
@@ -110,6 +112,8 @@ public class GEPriceOverlayPlugin extends Plugin
 			return;
 		}
 
+		int total = 0, fetching = 0, cached = 0, skipped = 0;
+
 		for (var item : container.getItems())
 		{
 			if (item.getId() <= 0 || item.getQuantity() <= 0)
@@ -117,29 +121,47 @@ public class GEPriceOverlayPlugin extends Plugin
 				continue;
 			}
 
+			total++;
 			int itemId = itemManager.canonicalize(item.getId());
+			// safe here — onItemContainerChanged runs on the client thread
+			String name = itemNameCache.computeIfAbsent(itemId,
+				id -> itemManager.getItemComposition(id).getName());
 
 			if (config.minimumValue() > 0 && itemManager.getItemPrice(itemId) < config.minimumValue())
 			{
+				log.debug("Skipping {} (id={}) — below minimum value", name, itemId);
+				skipped++;
 				continue;
 			}
 
-			if (!itemPriceCache.containsKey(itemId))
+			if (itemPriceCache.containsKey(itemId))
 			{
-				// put null as sentinel so we don't re-request non-tradeable items
-				itemPriceCache.put(itemId, null);
-				GEPriceFetcher.fetchPriceData(itemId, config.timeFrame()).thenAccept(data ->
-				{
-					if (data != null)
-					{
-						itemPriceCache.put(itemId, data);
-					}
-					panel.update(itemPriceCache);
-				});
+				log.debug("Already cached {} (id={})", name, itemId);
+				cached++;
+				continue;
 			}
+
+			log.debug("Fetching price for {} (id={})", name, itemId);
+			fetching++;
+			itemPriceCache.put(itemId, null);
+			GEPriceFetcher.fetchPriceData(itemId, config.timeFrame()).thenAccept(data ->
+			{
+				if (data != null)
+				{
+					log.debug("Got price for {} (id={}): current={} previous={} change={}%",
+						name, itemId, data.getCurrent(), data.getPrevious(), data.getChangePercent());
+					itemPriceCache.put(itemId, data);
+				}
+				else
+				{
+					log.debug("No price data for {} (id={}) — non-tradeable or API error", name, itemId);
+				}
+				panel.update(itemPriceCache, itemNameCache);
+			});
 		}
 
-		panel.update(itemPriceCache);
+		log.info("Bank scan: {} items total, {} fetching, {} cached, {} skipped", total, fetching, cached, skipped);
+		panel.update(itemPriceCache, itemNameCache);
 	}
 
 	public Map<Integer, PriceData> getItemPriceCache()

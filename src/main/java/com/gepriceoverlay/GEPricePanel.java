@@ -18,7 +18,7 @@ public class GEPricePanel extends PluginPanel
 
 	public GEPricePanel(ItemManager itemManager, GEPriceOverlayConfig config)
 	{
-		this.itemManager = itemManager;
+		this.itemManager = itemManager; // kept for potential future use
 		this.config = config;
 
 		setLayout(new BorderLayout());
@@ -41,7 +41,7 @@ public class GEPricePanel extends PluginPanel
 		add(scrollPane, BorderLayout.CENTER);
 	}
 
-	public void update(Map<Integer, PriceData> priceCache)
+	public void update(Map<Integer, PriceData> priceCache, Map<Integer, String> nameCache)
 	{
 		SwingUtilities.invokeLater(() ->
 		{
@@ -55,18 +55,13 @@ public class GEPricePanel extends PluginPanel
 				{
 					int itemId = e.getKey();
 					PriceData data = e.getValue();
-					String name = itemManager.getItemComposition(itemId).getName();
+					String name = nameCache.getOrDefault(itemId, "Item " + itemId);
 
 					int change = data.getChange();
 					Color changeColor = change > 0 ? new Color(0, 200, 0) : Color.RED;
 					String changeText = config.displayMode() == GEPriceOverlayConfig.DisplayMode.MONEY
 						? formatGold(change)
 						: String.format("%s%d%%", change > 0 ? "+" : "", data.getChangePercent());
-
-					JPanel row = new JPanel(new BorderLayout());
-					row.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-					row.setBorder(new EmptyBorder(4, 8, 4, 8));
-					row.setMaximumSize(new Dimension(Integer.MAX_VALUE, row.getPreferredSize().height));
 
 					JLabel nameLabel = new JLabel(name);
 					nameLabel.setForeground(Color.WHITE);
@@ -76,8 +71,12 @@ public class GEPricePanel extends PluginPanel
 					changeLabel.setForeground(changeColor);
 					changeLabel.setFont(changeLabel.getFont().deriveFont(Font.BOLD, 12f));
 
+					JPanel row = new JPanel(new BorderLayout());
+					row.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+					row.setBorder(new EmptyBorder(4, 8, 4, 8));
 					row.add(nameLabel, BorderLayout.WEST);
 					row.add(changeLabel, BorderLayout.EAST);
+					row.setMaximumSize(new Dimension(Integer.MAX_VALUE, row.getPreferredSize().height));
 
 					listPanel.add(row);
 					listPanel.add(Box.createVerticalStrut(2));
