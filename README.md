@@ -1,4 +1,4 @@
-# GE Bank Tracker
+# Bank Tracker
 
 Displays Grand Exchange price changes directly on your bank items and in a sortable sidebar panel.
 
