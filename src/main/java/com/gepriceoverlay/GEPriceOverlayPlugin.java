@@ -3,12 +3,12 @@ package com.gepriceoverlay;
 import com.google.inject.Provides;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
-import net.runelite.api.InventoryID;
 import net.runelite.api.ItemContainer;
 import net.runelite.api.MenuAction;
 import net.runelite.api.events.ItemContainerChanged;
 import net.runelite.api.events.MenuEntryAdded;
-import net.runelite.api.widgets.WidgetInfo;
+import net.runelite.api.gameval.InventoryID;
+import net.runelite.api.widgets.ComponentID;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
@@ -129,7 +129,7 @@ public class GEPriceOverlayPlugin extends Plugin
 	{
 		// Examine is always the last entry — use it as a trigger so we add Track/Untrack exactly once
 		if (!event.getOption().equals("Examine")
-			|| event.getActionParam1() != WidgetInfo.BANK_ITEM_CONTAINER.getId())
+			|| event.getActionParam1() != ComponentID.BANK_ITEM_CONTAINER)
 		{
 			return;
 		}
@@ -148,7 +148,7 @@ public class GEPriceOverlayPlugin extends Plugin
 		}
 
 		boolean pinned = pinnedItems.contains(itemId);
-		client.createMenuEntry(-1)
+		client.createMenuEntry(1)
 			.setOption(pinned ? "Untrack" : "Track")
 			.setTarget(event.getTarget())
 			.setType(MenuAction.RUNELITE)
@@ -158,7 +158,7 @@ public class GEPriceOverlayPlugin extends Plugin
 	@Subscribe
 	public void onItemContainerChanged(ItemContainerChanged event)
 	{
-		if (event.getContainerId() != InventoryID.BANK.getId())
+		if (event.getContainerId() != InventoryID.BANK)
 		{
 			return;
 		}
