@@ -28,7 +28,7 @@ public class GEPricePanel extends PluginPanel
 		setLayout(new BorderLayout());
 		setBackground(ColorScheme.DARK_GRAY_COLOR);
 
-		JLabel title = new JLabel("GE Bank Tracker", SwingConstants.CENTER);
+		JLabel title = new JLabel("Bank Tracker", SwingConstants.CENTER);
 		title.setForeground(Color.WHITE);
 		title.setFont(title.getFont().deriveFont(Font.BOLD, 14f));
 		title.setBorder(new EmptyBorder(8, 0, 2, 0));

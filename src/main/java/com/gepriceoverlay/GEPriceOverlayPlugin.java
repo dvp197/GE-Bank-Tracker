@@ -33,7 +33,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @PluginDescriptor(
-		name = "GE Bank Tracker",
+		name = "Bank Tracker",
 		description = "Displays GE price changes for bank tab items",
 		tags = {"ge", "price", "overlay", "bank"}
 )
@@ -87,7 +87,7 @@ public class GEPriceOverlayPlugin extends Plugin
 		panel = new GEPricePanel(config);
 		final BufferedImage icon = ImageUtil.loadImageResource(getClass(), "/icon.png");
 		navButton = NavigationButton.builder()
-			.tooltip("GE Bank Tracker")
+			.tooltip("Bank Tracker")
 			.icon(icon)
 			.priority(5)
 			.panel(panel)
